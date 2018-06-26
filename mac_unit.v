@@ -20,11 +20,11 @@ module mac_unit(
 //------------------Inputs-------------------
 input clock;
 input reset;
-input win;
 input instr;
 //------------------Outputs------------------
 output win_request;
 //------------------Inout--------------------
+inout [(`DATA_SIZE-1):0] win;
 inout [(`DATA_SIZE-1):0] data_south1;
 inout [(`DATA_SIZE-1):0] data_north1;
 inout [(`DATA_SIZE-1):0] data_west1;
@@ -35,5 +35,6 @@ inout [(`DATA_SIZE-1):0] data_west2;
 inout [(`DATA_SIZE-1):0] data_east2;
 //------------------Variables------------------
 integer counter;
+reg [(`DATA_SIZE-1):0] next_win;
 
 endmodule // mac_unit
