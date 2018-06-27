@@ -9,7 +9,7 @@ module systolic_setup_in(
 	matrix_in_request,
 	matrix_out,
 	instr
-	)
+	);
 
 //###############################################################
 //Inputs
@@ -73,12 +73,13 @@ generate
 	for (i=0; i< `MAC_WIDTH; i=i+1) begin
 		for (j=0; j< `MAC_WIDTH; j=j+1) begin
 			syn_fifo #(8,4)fifo_win(
-			.data_in(data_in_fifo_values[i]),
-			.data_out(data_out_fifo_values[i]),
-			.rd_en(rd_en_fifo_values[i]),
-			.wr_en(wr_en_fifo_values[i]),
-			.full(full_fifo_values[i]),
-			.empty(empty_fifo_values[i]),
+			.data_in(data_in_fifo_values[i][j]),
+			.data_out(data_out_fifo_values[i][j]),
+			.rd_en(rd_en_fifo_values[i][j]),
+			.wr_en(wr_en_fifo_values[i][j]),
+			.wr_en(wr_en_fifo_values[i][j]),
+			.full(full_fifo_values[i][j]),
+			.empty(empty_fifo_values[i][j]),
 			.clk(clk),
 			.reset(reset)
 				);
@@ -188,4 +189,50 @@ always @(posedge clock or negedge reset) begin
 		end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
 	end // end else
 end // always @(posedge clock or negedge reset)
-endmodule // systolic_setup_in
+//_______________________________________________________________
+//Sending a request for a new matrix_in
+integer count2;
+integer count3;
+//_______________________________________________________________
+
+always @(posedge clock or negedge reset) begin 
+	if(~reset) begin
+		count1 <= 0;
+	end
+	else begin
+
+		if (matrix_in_request==1) begin
+			count3<=count3+1;
+
+			if (count3==2) begin
+				for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+					for (iter2=0; iter<`MAC_WIDTH; iter2=iter2+1) begin
+						wr_en_fifo_values[iter][iter2]<=1;
+					end // for (iter2=0; iter<`MAC_WIDTH; iter2=iter2+1)
+				end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
+				matrix_in_request<=0;
+			end // if (count3==2)
+
+		end // if
+		else begin
+			count2<=0;
+			count3<=0;
+
+			for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+				for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
+					wr_en_fifo_values[iter][iter2]
+					if (full_fifo_values[iter][iter2]==1) begin
+						count2<=count2+1;
+					end // if (full_fifo_values[iter][iter2]==1)
+				end // for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1)
+			end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
+			
+			if (count2==0) begin
+				matrix_in_request <=1;
+			end // if (count2==0)
+
+		end // else
+	end // else
+end
+
+endmodule // systolic_setup_ins
