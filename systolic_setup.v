@@ -97,7 +97,8 @@ integer iter2;// iters are used for the "for loops"
 integer count1;//counts are the counters in the system
 integer fifo_left_counter [(`MAC_WIDTH-1):0];
 //###############################################################
-
+//Startup routine
+//_______________________________________________________________
 always @(posedge clock or negedge reset) begin
 	//Upon reset, all the counters are reset to zero. And only the
 	// write to FIFO left buffer is put on High. Everytime a value
@@ -114,6 +115,7 @@ always @(posedge clock or negedge reset) begin
 		end // for (iter=0; iter< `MAC_WIDTH; iter=iter+1)
 	end
 	else if (count1<`MAC_WIDTH) begin
+		count1 <= count1 + 1;
 		for (iter=0; iter< `MAC_WIDTH; iter=iter+1) begin
 			//The FIFO buffers are activated in a sequential order
 			// giving rise to a pyramidal setup.
@@ -124,7 +126,7 @@ always @(posedge clock or negedge reset) begin
 					fifo_left_counter[iter] <= fifo_left_counter[iter] + 1;
 				end // if (fifo_left_counter[iter] <255)
 				else begin
-					fifo_left_counter[iter]=0;
+					fifo_left_counter[iter]<=0;
 				end // else
 
 				data_in_fifo[iter] <= data_out_fifo_values[fifo_left_counter[iter]][iter];
@@ -149,8 +151,41 @@ always @(posedge clock or negedge reset) begin
 		end // for (iter=0; iter< `MAC_WIDTH; iter=iter+1)
 	end
 end // always @(posedge clock or negedge reset)
+//_______________________________________________________________
+//FIFO behaviour during the normal runtime
+//_______________________________________________________________
+always @(posedge clock or negedge reset) begin 
+	if(~reset) begin
+		count1 <= 0;
+	end // if(~reset)
+	else if (count1 >= MAC_WIDTH) begin
+		for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+			//Each FIFO has its own counter and once it
+			// owerflows, it is reset back to zero.
+			//___________________________________________________
+			if (fifo_left_counter[iter] <255) begin
+				fifo_left_counter[iter] <= fifo_left_counter[iter] + 1;
+			end // if (fifo_left_counter[iter] <255)
+			else begin
+				fifo_left_counter[iter]<=0;
+			end // else
+			//___________________________________________________
+			//Add a value to the FIFO left buffer
+			data_in_fifo[iter] <= data_out_fifo_values[fifo_left_counter[iter]][iter];
 
-endmodule // systolic_setup_in
-
-
+			//Once a value is read from the FIFO values, send a
+			// read request to update the data_out of it.
+			//___________________________________________________
+			for (iter2=0; iter2< `MAC_WIDTH; iter2=iter2+1) begin
+				if (iter2==fifo_left_counter[iter]) begin
+					rd_en_fifo_values[iter2][iter] <= 1;
+				end // if (iter2==fifo_left_counter[iter])
+				else begin
+					rd_en_fifo_values[iter2][iter] <= 0;
+				end // else
+			end // for (iter2=0; iter2< `MAC_WIDTH; iter2=iter2+1)
+			//___________________________________________________
+		end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
+	end // end else
+end // always @(posedge clock or negedge reset)
 endmodule // systolic_setup_in
