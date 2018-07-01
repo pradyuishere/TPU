@@ -2,7 +2,7 @@
 module syn_fifo
    #(
       parameter DATA_WIDTH = 8,
-      parameter LOG2_DEPTH = 8 // i.e. fifo depth=2**LOG2_DEPTH
+      parameter LOG2_DEPTH = 2 // i.e. fifo depth=2**LOG2_DEPTH
    )
    (
       input [DATA_WIDTH-1:0]  data_in,

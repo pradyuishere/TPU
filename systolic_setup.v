@@ -209,7 +209,7 @@ always @(posedge clock or negedge reset) begin
 
 			if (count3==2) begin
 				for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
-					for (iter2=0; iter<`MAC_WIDTH; iter2=iter2+1) begin
+					for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
 						wr_en_fifo_values[iter][iter2]<=1;
 					end // for (iter2=0; iter<`MAC_WIDTH; iter2=iter2+1)
 				end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
