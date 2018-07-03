@@ -1,9 +1,9 @@
 `include "fifo.v"
 
 `define DATA_SIZE 8
-`define MAC_WIDTH 256
+`define MAC_WIDTH 4
 
-module systolic_setup_in(
+module systolic_setup_left_in(
 	clock,
 	reset,
 	matrix_in,
@@ -11,231 +11,144 @@ module systolic_setup_in(
 	matrix_out,
 	instr
 	);
-
-//###############################################################
 //Inputs
 input clock;
 input reset;
 input instr;
 input [(`DATA_SIZE*`MAC_WIDTH*`MAC_WIDTH-1):0] matrix_in;
-//###############################################################
+
 //Outputs
-output [(`DATA_SIZE*`MAC_WIDTH*`MAC_WIDTH-1):0] matrix_out;
-output reg matrix_in_request;
+output reg [(`DATA_SIZE*`MAC_WIDTH-1):0] matrix_out;
+output reg [`MAC_WIDTH*`MAC_WIDTH-1:0] matrix_in_request;
 //###############################################################
-//Part one: Inititalising the FIFO buffers which transport the 
-// input matrix sequentially.
-//###############################################################
-//Variables
-reg [(`DATA_SIZE-1):0] data_in_fifo [(`MAC_WIDTH-1):0];
-wire [(`DATA_SIZE-1):0] data_out_fifo [(`MAC_WIDTH-1):0];
-reg wr_en_fifo[(`MAC_WIDTH-1):0];
-reg rd_en_fifo[(`MAC_WIDTH-1):0];
-wire empty_fifo[(`MAC_WIDTH-1):0];
-wire full_fifo[(`MAC_WIDTH-1):0];
-//###############################################################
-//FIFO buffers
+//Synfifo connects
+reg [`DATA_SIZE-1:0] fifo_in_left [`MAC_WIDTH-1:0];
+wire [`DATA_SIZE-1:0] fifo_out_left [`MAC_WIDTH-1:0];
+reg rd_en_left [`MAC_WIDTH-1:0];
+reg wr_en_left [`MAC_WIDTH-1:0];
+wire full_fifo_left [`MAC_WIDTH-1:0];
+wire empty_fifo_left [`MAC_WIDTH-1:0];
+integer clock_count=0;
+
 genvar i;
-genvar j;
 
 generate
-	for (i=0; i<`MAC_WIDTH;i=i+1) begin
+	for(i=0;i<`MAC_WIDTH;i=i+1)begin
 		syn_fifo fifo_left(
-			.data_in(data_in_fifo[i]),
-			.data_out(data_out_fifo[i]),
-			.rd_en(rd_en_fifo[i]),
-			.wr_en(wr_en_fifo[i]),
-			.full(full_fifo[i]),
-			.empty(empty_fifo[i]),
-			.clk(clk),
+			.data_in(fifo_in_left[i]),
+			.wr_en(wr_en_left[i]),
+			.rd_en(rd_en_left[i]),
+			.data_out(fifo_out_left[i]),
+			.full(full_fifo_left[i]),
+			.empty(empty_fifo_left[i]),
+			.clk(clock),
 			.reset(reset)
-		);
-	end // for (i=0; i<`MAC_WIDTH;i=i+1)
-endgenerate
-
-//###############################################################
-//End of part 1
-//###############################################################
-//###############################################################
-//Part 2: Initialising the FIFO buffers which borrow the input 
-// weights and sequentially distributing them back to the fifo
-// buffers initialised in part 1.
-//###############################################################
-//Variables
-wire [(`DATA_SIZE-1):0] data_in_fifo_values [(`MAC_WIDTH-1):0][(`MAC_WIDTH-1):0];
-wire [(`DATA_SIZE-1):0] data_out_fifo_values [(`MAC_WIDTH-1):0][(`MAC_WIDTH-1):0];
-reg wr_en_fifo_values[(`MAC_WIDTH-1):0][(`MAC_WIDTH-1):0];
-reg rd_en_fifo_values[(`MAC_WIDTH-1):0][(`MAC_WIDTH-1):0];
-wire empty_fifo_values[(`MAC_WIDTH-1):0][(`MAC_WIDTH-1):0];
-wire full_fifo_values[(`MAC_WIDTH-1):0][(`MAC_WIDTH-1):0];
-//###############################################################
-
-generate
-	for (i=0; i< `MAC_WIDTH; i=i+1) begin
-		for (j=0; j< `MAC_WIDTH; j=j+1) begin
-			syn_fifo #(8,4)fifo_win(
-			.data_in(data_in_fifo_values[i][j]),
-			.data_out(data_out_fifo_values[i][j]),
-			.rd_en(rd_en_fifo_values[i][j]),
-			.wr_en(wr_en_fifo_values[i][j]),
-			.full(full_fifo_values[i][j]),
-			.empty(empty_fifo_values[i][j]),
-			.clk(clk),
-			.reset(reset)
-				);
-		end // for (j=0; j< `MAC_WIDTH; j=j+1)
-	end // for (i=0; i< `MAC_WIDTH; i=i+1)
+			);
+	end // for(i=0;i<`MAC_WIDTH;i=i+1)
 endgenerate
 //###############################################################
-//End of part 2
-//###############################################################
-//Part 3: Logic for systolic setup
-//###############################################################
 //Variables
-integer iter;// iters are used for the "for loops"
-integer iter1;// iters are used for the "for loops"
-integer iter2;// iters are used for the "for loops"
-integer count1;//counts are the counters in the system
-integer fifo_left_counter [(`MAC_WIDTH-1):0];
-//###############################################################
-//Startup routine
-//_______________________________________________________________
-always @(posedge clock or negedge reset) begin
-	//Upon reset, all the counters are reset to zero. And only the
-	// write to FIFO left buffer is put on High. Everytime a value
-	// is read from the FIFO values buffer, put a read eneable 
-	// once so that the latest value is refreshed.
-	if(~reset) begin
-		count1 <= 0;
-		for (iter=0; iter< `MAC_WIDTH; iter=iter+1) begin
+reg reset_flag;
+reg ready_flag_left=0;
+integer iter;
+integer iter2;
+integer count;
+integer fifo_values_count [`MAC_WIDTH-1:0];
 
-			for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
-				rd_en_fifo_values[iter][iter2] <= 0;
-				wr_en_fifo_values[iter][iter2] <= 0;
-			end // for (iter=0; iter< `MAC_WIDTH; iter=iter+1)
-			
-			rd_en_fifo[iter] <= 0;
-			wr_en_fifo[iter] <=1;
-		end // for (iter=0; iter< `MAC_WIDTH; iter=iter+1)
+always @(posedge clock or posedge reset) begin
+	if (clock_count<15) begin
+		//$display("count : %d",count);
+		//$display("Value into fifo_in_left : %d, full_fifo_left: %d, reset : %d", fifo_in_left[0], full_fifo_left[0], reset);
+		//$display("The current clock is: %d, fifo_out_left: %d",clock_count, fifo_out_left[0]);
 	end
-	else if (count1<`MAC_WIDTH) begin
-		count1 <= count1 + 1;
-		for (iter=0; iter< `MAC_WIDTH; iter=iter+1) begin
-			//The FIFO buffers are activated in a sequential order
-			// giving rise to a pyramidal setup.
-			if (iter <=count1) begin 
-				//Each FIFO has its own counter and once it
-				// owerflows, it is reset back to zero.
-				if (fifo_left_counter[iter] <255) begin
-					fifo_left_counter[iter] <= fifo_left_counter[iter] + 1;
-				end // if (fifo_left_counter[iter] <255)
-				else begin
-					fifo_left_counter[iter]<=0;
-				end // else
-
-				data_in_fifo[iter] <= data_out_fifo_values[fifo_left_counter[iter]][iter];
-				//_______________________________________________
-				//Once the FIFO buffers are read, they should to be
-				// updated with new values. This requires setting
-				// rd_en_fifo_values flag to one for a single clock
-				// interval.
-				for (iter2=0; iter2< `MAC_WIDTH; iter2=iter2+1) begin
-					if (iter2==fifo_left_counter[iter]) begin
-						rd_en_fifo_values[iter2][iter] <= 1;
-					end // if (iter2==fifo_left_counter[iter])
-					else begin
-						rd_en_fifo_values[iter2][iter] <= 0;
-					end // else
-				end // for (iter2=0; iter2< `MAC_WIDTH; iter2=iter2+1)
-				//_______________________________________________
-			end // if (fifo_left_counter[iter] <=count1)
-			else begin
-				data_in_fifo[iter] <=0;
-			end // else
-		end // for (iter=0; iter< `MAC_WIDTH; iter=iter+1)
-	end
-end // always @(posedge clock or negedge reset)
-//_______________________________________________________________
-//FIFO behaviour during the normal runtime
-//_______________________________________________________________
-always @(posedge clock or negedge reset) begin 
-	if(~reset) begin
-		count1 <= 0;
-	end // if(~reset)
-	else if (count1 >= `MAC_WIDTH) begin
+	clock_count=clock_count+1;
+	if(reset) begin
+		reset_flag <= 0;
+		count=0;
+		$display("I have been reset");
 		for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
-			//Each FIFO has its own counter and once it
-			// owerflows, it is reset back to zero.
-			//___________________________________________________
-			if (fifo_left_counter[iter] <255) begin
-				fifo_left_counter[iter] <= fifo_left_counter[iter] + 1;
-			end // if (fifo_left_counter[iter] <255)
-			else begin
-				fifo_left_counter[iter]<=0;
-			end // else
-			//___________________________________________________
-			//Add a value to the FIFO left buffer
-			data_in_fifo[iter] <= data_out_fifo_values[fifo_left_counter[iter]][iter];
-
-			//Once a value is read from the FIFO values, send a
-			// read request to update the data_out of it.
-			//___________________________________________________
-			for (iter2=0; iter2< `MAC_WIDTH; iter2=iter2+1) begin
-				if (iter2==fifo_left_counter[iter]) begin
-					rd_en_fifo_values[iter2][iter] <= 1;
-				end // if (iter2==fifo_left_counter[iter])
-				else begin
-					rd_en_fifo_values[iter2][iter] <= 0;
-				end // else
-			end // for (iter2=0; iter2< `MAC_WIDTH; iter2=iter2+1)
-			//___________________________________________________
+			fifo_values_count[iter]=0;
 		end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
-	end // end else
-end // always @(posedge clock or negedge reset)
-//_______________________________________________________________
-//Sending a request for a new matrix_in
-integer count2;
-integer count3;
-//_______________________________________________________________
-
-always @(posedge clock or negedge reset) begin 
-	if(~reset) begin
-		count1 <= 0;
-	end
+	end 
+	
 	else begin
+		if (full_fifo_left[0]==1) begin
+			ready_flag_left=1;
+		end // if (full_fifo_left==1)
+		
 
-		if (matrix_in_request==1) begin
-			count3<=count3+1;
+		if (ready_flag_left==0)begin
+			for (iter=0;iter<`MAC_WIDTH;iter=iter+1) begin
+				if (iter>count-1) begin
+					fifo_in_left[iter]=0;
+					//$display("I am assigning zero at iter : %d, count : %d",iter, count);
+				end
+				else begin
+					fifo_in_left[iter] = matrix_in[((fifo_values_count[iter])*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1];
+					//$display("matrix_in, iter: %d, fifo_values_count[iter] : %d", iter, fifo_values_count[iter]);
 
-			if (count3==2) begin
-				for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+				
 					for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
-						wr_en_fifo_values[iter][iter2]<=1;
-					end // for (iter2=0; iter<`MAC_WIDTH; iter2=iter2+1)
-				end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
-				matrix_in_request<=0;
-			end // if (count3==2)
-
-		end // if
+						if (iter2 ==fifo_values_count[iter]) begin
+							matrix_in_request[iter2*`MAC_WIDTH+iter]=1;
+						end // if (iter2 ==fifo_values_count[iter])
+						else begin
+							matrix_in_request[iter2*`MAC_WIDTH+iter]=0;
+						end // else
+					end // for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1)
+					
+				
+					if (fifo_values_count[iter]<`MAC_WIDTH-1) begin
+						fifo_values_count[iter]=fifo_values_count[iter]+1;
+					end
+					else begin
+						fifo_values_count[iter]=0;
+					end // else
+				end
+				rd_en_left[iter] =0;
+				wr_en_left[iter]=1;
+			end
+		end // if (full_fifo_left==0)
 		else begin
-			count2<=0;
-			count3<=0;
-
-			for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+			for (iter=0;iter<`MAC_WIDTH; iter=iter+1) begin
+				
+				fifo_in_left[iter] = matrix_in[((fifo_values_count[iter])*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1];
+				// $display("matrix_in : %d", matrix_in[((fifo_values_count[iter])*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1]);
+				// $display("fifo_in_left : %d", fifo_in_left[iter]);
+				
+				
 				for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
-					wr_en_fifo_values[iter][iter2] <=0;
-					if (full_fifo_values[iter][iter2]==1) begin
-						count2<=count2+1;
-					end // if (full_fifo_values[iter][iter2]==1)
+					if (iter2 ==fifo_values_count[iter]) begin
+						matrix_in_request[iter2*`MAC_WIDTH+iter]=1;
+					end // if (iter2 ==fifo_values_count[iter])
+					else begin
+						matrix_in_request[iter2*`MAC_WIDTH+iter]=0;
+					end // else
 				end // for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1)
-			end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
+				
+				
+				if (fifo_values_count[iter]<`MAC_WIDTH-1) begin
+					fifo_values_count[iter]=fifo_values_count[iter]+1;
+				end
+				else begin
+					fifo_values_count[iter]=0;
+				end // else
+					rd_en_left[iter]=1;
+					wr_en_left[iter]=1;
 			
-			if (count2==0) begin
-				matrix_in_request <=1;
-			end // if (count2==0)
+			end // for (iter=0;iter<`MAC_WIDTH; iter=iter+1)
 
 		end // else
 	end // else
+	count=count+1;
+end // always @(posedge clock or posedge reset)
+//###############################################################
+
+always @(posedge clock) begin
+	for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+		matrix_out[iter*`DATA_SIZE+:`DATA_SIZE-1]=fifo_out_left[iter];
+		// $display("matrix_out always, fifo_out_left : %d", fifo_out_left[iter]);
+	end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
 end
 
 endmodule // systolic_setup_ins

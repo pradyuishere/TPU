@@ -1,4 +1,3 @@
-
 module syn_fifo
    #(
       parameter DATA_WIDTH = 8,
@@ -22,6 +21,8 @@ module syn_fifo
    reg   [LOG2_DEPTH : 0]     depth_cnt;
  
    always @(posedge clk) begin
+      //$display("In fifo, data_in : %d, data_out : %d, full : %d", data_in,data_out,  full);
+      //$display("In fifo, rd_en : %d, wr_en : %d",rd_en, wr_en);
       if(reset) begin
          wr_ptr <= 'h0;
          rd_ptr <= 'h0;

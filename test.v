@@ -1,87 +1,77 @@
-`include "fifo.v"
+`include "systolic_setup.v"
 
 `define DATA_SIZE 8
-`define MAC_WIDTH 2
+`define MAC_WIDTH 4
 
-module systolic_setup_in();
+module systolic_setup_left_in_tb();
 
-//###############################################################
 //Inputs
 reg clock=0;
+wire clock_wire = clock;
 reg reset;
+wire reset_wire = reset;
 reg instr;
+wire instr_wire=instr;
 reg [(`DATA_SIZE*`MAC_WIDTH*`MAC_WIDTH-1):0] matrix_in;
+wire [(`DATA_SIZE*`MAC_WIDTH*`MAC_WIDTH-1):0] matrix_in_wire = matrix_in;
 //###############################################################
 //Outputs
-reg [(`DATA_SIZE*`MAC_WIDTH*`MAC_WIDTH-1):0] matrix_out;
-reg matrix_in_request;
+wire [(`DATA_SIZE*`MAC_WIDTH-1):0] matrix_out;
+wire [`MAC_WIDTH*`MAC_WIDTH-1:0] matrix_in_request;
 //###############################################################
-//Synfifo connects
-reg [`DATA_SIZE-1:0] fifo_in [`MAC_WIDTH-1:0];
-wire [`DATA_SIZE-1:0] fifo_out [`MAC_WIDTH-1:0];
-reg rd_en [`MAC_WIDTH-1:0];
-reg wr_en [`MAC_WIDTH-1:0];
-wire full [`MAC_WIDTH-1:0];
-wire empty [`MAC_WIDTH-1:0];
-integer clock_count=0;
 
-genvar i;
+systolic_setup_left_in unit1 (
+	.clock(clock_wire),
+	.reset(reset_wire),
+	.matrix_in(matrix_in_wire),
+	.matrix_in_request(matrix_in_request),
+	.matrix_out(matrix_out),
+	.instr(instr_wire)
+	);
 
-generate
-	for(i=0;i<`MAC_WIDTH;i=i+1)begin
-		syn_fifo fifo1(
-			.data_in(fifo_in[i]),
-			.wr_en(wr_en[i]),
-			.rd_en(rd_en[i]),
-			.data_out(fifo_out[i]),
-			.full(full[i]),
-			.empty(empty[i]),
-			.clk(clock),
-			.reset(reset)
-			);
-	end // for(i=0;i<`MAC_WIDTH;i=i+1)
-endgenerate
 //###############################################################
+
 //Variables
-reg reset_flag;
-reg ready_flag=0;
 integer iter;
 integer iter2;
+integer clock_count=0;
 
 initial begin
+
+
+	for(iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+		for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
+			matrix_in[(iter2*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1]= $urandom_range(255,0);
+		end // for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1)
+	end // for(iter=0; iter<`MAC_WIDTH; iter=iter+1)
+
 	reset=1;
 	#5 reset=0;
+	
+	for(iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+		for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
+			$write("%d ",matrix_in[(iter2*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1]);
+		end // for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1)
+		$display(" ");
+	end
+
 end
 
-always @(posedge clock or posedge reset) begin
-	$display("Value into fifo_in : %d, full: %d", fifo_in[1], full[1]);
-	$display("The current clock is: %d, fifo_out: %d",clock_count, fifo_out[1]);
-	clock_count=clock_count+1;
-	if(reset) begin
-		reset_flag <= 0;
-	end else begin
-		if (full[0]==1) begin
-			ready_flag=1;
-		end // if (full==1)
-		if (ready_flag==0)begin
-			for (iter=0;iter<`MAC_WIDTH;iter=iter+1) begin
-				fifo_in[iter] = $urandom_range(255,0);
-				rd_en[iter] =0;
-				wr_en[iter]=1;
-			end
-		end // if (full==0)
-		else begin
-			for (iter=0;iter<`MAC_WIDTH; iter=iter+1) begin
-				fifo_in[iter] = $urandom_range(255,0);
-				rd_en[iter]=1;
-				wr_en[iter]=1;
-			end
+always @ (posedge clock) begin
+	if (clock_count<15) begin
+		$display("clock_count : %d, reset : %d",clock_count, reset);
+		for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin 
+			$write("%d ", matrix_out[iter*`DATA_SIZE+:`DATA_SIZE-1]);
 		end
+		$display(" ");
 	end
-end
+	clock_count=clock_count+1;
+end // always @ (posedge clock)
 
 always begin
 	#0.5 clock=~clock;
 end // always
+
+//###############################################################
 
 endmodule // systolic_setup_ins
