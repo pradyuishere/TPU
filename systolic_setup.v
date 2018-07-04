@@ -84,7 +84,7 @@ always @(posedge clock or posedge reset) begin
 					//$display("I am assigning zero at iter : %d, count : %d",iter, count);
 				end
 				else begin
-					fifo_in_left[iter] = matrix_in[((fifo_values_count[iter])*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1];
+					fifo_in_left[iter] = matrix_in[((fifo_values_count[iter])*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE];
 					//$display("matrix_in, iter: %d, fifo_values_count[iter] : %d", iter, fifo_values_count[iter]);
 
 				
@@ -112,7 +112,7 @@ always @(posedge clock or posedge reset) begin
 		else begin
 			for (iter=0;iter<`MAC_WIDTH; iter=iter+1) begin
 				
-				fifo_in_left[iter] = matrix_in[((fifo_values_count[iter])*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1];
+				fifo_in_left[iter] = matrix_in[((fifo_values_count[iter])*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE];
 				// $display("matrix_in : %d", matrix_in[((fifo_values_count[iter])*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1]);
 				// $display("fifo_in_left : %d", fifo_in_left[iter]);
 				
@@ -146,7 +146,7 @@ end // always @(posedge clock or posedge reset)
 
 always @(posedge clock) begin
 	for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
-		matrix_out[iter*`DATA_SIZE+:`DATA_SIZE-1]=fifo_out_left[iter];
+		matrix_out[iter*`DATA_SIZE+:`DATA_SIZE]=fifo_out_left[iter];
 		// $display("matrix_out always, fifo_out_left : %d", fifo_out_left[iter]);
 	end // for (iter=0; iter<`MAC_WIDTH; iter=iter+1)
 end
