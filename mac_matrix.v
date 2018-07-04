@@ -29,6 +29,7 @@ output [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_out2;
 integer mac_matrix_counter=0;
 integer count1;
 integer count2;
+reg ground;
 //Horizontal interconnects have 2 extra rows for data input
 wire [(2*`DATA_SIZE-1):0] mac_horizontal1 [(`MAC_WIDTH-1):0][(`MAC_WIDTH):0]; 
 wire [(2*`DATA_SIZE-1):0] mac_horizontal2 [(`MAC_WIDTH-1):0][(`MAC_WIDTH):0];
@@ -92,10 +93,10 @@ generate
 		assign mac_horizontal1[i][0] = values_in1[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)];
 		assign mac_horizontal2[i][0] = values_in2[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)];
 
-		assign mac_vertical1[i][0] =0;
-		assign mac_vertical2[i][0] =0;
-		assign mac_vertical3[i][0] =0;
-		assign mac_vertical4[i][0] =0;
+		assign mac_vertical1[0][i] =0;
+		assign mac_vertical2[0][i] =0;
+		assign mac_vertical3[0][i] =0;
+		assign mac_vertical4[0][i] =0;
 	end // for (i=0; i<`MAC_WIDTH; i= i+1)1
 endgenerate
 //##########################################################################

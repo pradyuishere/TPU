@@ -74,11 +74,11 @@ integer counter;
 reg [(`DATA_SIZE-1):0] next_win;
 
 always @ (posedge clock) begin
-	$display("value_in : %d, win : %d, data_north1_in : %d", data_west1_in, win, data_north1_in);
+	//$display("value_in : %d, win : %d, data_north1_in : %d", data_west1_in, win, data_north1_in);
 
 	if (instr==0) begin
 		data_south1_out_reg <= data_west1_in*win+data_north1_in;
-		data_east1_out_reg <=data_west1_in;
+		data_east1_out_reg <= data_west1_in;
 	end // if (instr==1)
 end // always @ (posedge clock)
 
