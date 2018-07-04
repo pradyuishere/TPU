@@ -9,14 +9,19 @@ reg clock=0;
 wire clock_wire = clock;
 reg reset;
 wire reset_wire = reset;
-reg instr;
+reg instr=0;
 wire instr_wire=instr;
 wire [(`MAC_WIDTH*`MAC_WIDTH*`DATA_SIZE-1):0] weights_data_in;
-wire [2*(`MAC_WIDTH*`DATA_SIZE-1):0] values_in1;
-wire [2*(`MAC_WIDTH*`DATA_SIZE-1):0] values_in2;
-wire [2*(`MAC_WIDTH*`DATA_SIZE-1):0] values_out1;
-wire [2*(`MAC_WIDTH*`DATA_SIZE-1):0] values_out2;
+reg [(`MAC_WIDTH*`MAC_WIDTH*`DATA_SIZE-1):0] weights_data_in_reg;
+wire [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_in1;
+reg [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_in1_reg;
+wire [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_in2;
+wire [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_out1;
+wire [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_out2;
 wire [(`MAC_WIDTH*`MAC_WIDTH-1):0]weights_request;
+
+assign weights_data_in=weights_data_in_reg;
+assign values_in1=values_in1_reg;
 
 integer iter;
 integer iter2;
@@ -32,18 +37,19 @@ mac_matrix unit1(
 	.values_out1(values_out1),
 	.values_out2(values_out2)
 	);
+
 initial begin
 	for (iter=0;iter<`MAC_WIDTH;iter=iter+1) begin
 		for(iter2=0; iter2<`MAC_WIDTH;iter2=iter2+1) begin
-			weights_data_in[(iter*`MAC_WIDTH+iter2)*`DATA_SIZE+:`DATA_SIZE-1]= $urandom_range(255,0);
+			weights_data_in_reg[(iter*`MAC_WIDTH+iter2)*`DATA_SIZE+:`DATA_SIZE]= $urandom_range(255,0);
 		end // for(iter2=0; iter2<`MAC_WIDTH;iter2=iter2+1)
-		values_in1[iter*`DATA_SIZE+:`DATA_SIZE-1]= $urandom_range(255,0);
+		values_in1_reg[iter*`DATA_SIZE+:`DATA_SIZE]= $urandom_range(255,0);
 	end // for (iter=0;iter<`MAC_WIDTH;iter=iter+1)
 end // initial
 
 always @ (posedge clock) begin
 	for (iter=0; iter<`MAC_WIDTH;iter=iter+1) begin
-		$write("%d ", values_out[iter*`DATA_SIZE: `DATA_SIZE-1]);
+		$write("%d ", values_out1[iter*`DATA_SIZE+: `DATA_SIZE]);
 	end // for (iter=0; iter<`MAC_WIDTH;iter=iter+1)
 	$display(" ");
 end // always @ (posedge clock)

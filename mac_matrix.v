@@ -52,7 +52,7 @@ generate
 				.mac_matrix_counter(mac_matrix_counter),
 				.reset(reset),
 				.win_request(weights_request[i*`DATA_SIZE + j]),
-				.win(weights_data_in[((i*`MAC_WIDTH + j)*`DATA_SIZE)+:`DATA_SIZE-1]),
+				.win(weights_data_in[((i*`MAC_WIDTH + j)*`DATA_SIZE)+:`DATA_SIZE]),
 				.instr(instr),
 				.data_south1_in(mac_vertical3[i+1][j]),
 				.data_north1_in(mac_vertical1[i][j]),
@@ -78,12 +78,12 @@ endgenerate
 //Connect the left and the bottom edges of MACs with the values_in and 
 // values_out respectedly.
 
-always @ (posedge clock) begin
-	for (count1=0; count1<`MAC_WIDTH; count1=count1+1) begin
-		mac_vertical1[count1][0] =0;
-		mac_vertical2[count1][0] =0;
-	end // for (count1=0; count1<`MAC_WIDTH; count1=count1+1)
-end // always @ (posedge clock)
+// always @ (posedge clock) begin
+// 	for (count1=0; count1<`MAC_WIDTH; count1=count1+1) begin
+// 		mac_vertical1[count1][0] =0;
+// 		mac_vertical2[count1][0] =0;
+// 	end // for (count1=0; count1<`MAC_WIDTH; count1=count1+1)
+// end // always @ (posedge clock) 
 
 generate
 	for (i=0; i<`MAC_WIDTH; i= i+1) begin
@@ -91,6 +91,11 @@ generate
 		assign values_out2[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)] = mac_vertical2[`MAC_WIDTH][i];
 		assign mac_horizontal1[i][0] = values_in1[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)];
 		assign mac_horizontal2[i][0] = values_in2[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)];
+
+		assign mac_vertical1[i][0] =0;
+		assign mac_vertical2[i][0] =0;
+		assign mac_vertical3[i][0] =0;
+		assign mac_vertical4[i][0] =0;
 	end // for (i=0; i<`MAC_WIDTH; i= i+1)1
 endgenerate
 //##########################################################################
