@@ -1,7 +1,7 @@
 `include "systolic_setup.v"
 
 `define DATA_SIZE 8
-`define MAC_WIDTH 4
+`define MAC_WIDTH 8
 
 module systolic_setup_left_in_tb();
 
@@ -54,12 +54,14 @@ initial begin
 		end // for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1)
 		$display(" ");
 	end
+	$display(" ");
+	$display(" ");
 
 end
 
 always @ (posedge clock) begin
-	if (clock_count<15) begin
-		$display("clock_count : %d, reset : %d",clock_count, reset);
+	if (clock_count<20) begin
+		//$display("clock_count : %d, reset : %d",clock_count, reset);
 		for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin 
 			$write("%d ", matrix_out[iter*`DATA_SIZE+:`DATA_SIZE-1]);
 		end

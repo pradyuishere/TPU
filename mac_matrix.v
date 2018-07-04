@@ -1,7 +1,7 @@
 `include "mac_unit.v"
 
 `define DATA_SIZE 8
-`define MAC_WIDTH 256
+`define MAC_WIDTH 8
 
 module mac_matrix(
 	clock,
@@ -63,6 +63,14 @@ endgenerate
 //##########################################################################
 //Connect the left and the bottom edges of MACs with the values_in and 
 // values_out respectedly.
+
+always @ (posedge clock) begin
+	for (count1=0; count1<`MAC_WIDTH; count1=count1+1) begin
+		mac_vertical1[count1][0] =0;
+		mac_vertical2[count1][0] =0;
+	end // for (count1=0; count1<`MAC_WIDTH; count1=count1+1)
+end // always @ (posedge clock)
+
 generate
 	for (i=0; i<`MAC_WIDTH; i= i+1) begin
 		assign values_out1[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)] = mac_vertical1[`MAC_WIDTH][i];

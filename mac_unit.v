@@ -1,6 +1,6 @@
 
 `define DATA_SIZE 8
-`define MAC_WIDTH 256
+`define MAC_WIDTH 8
 
 module mac_unit(
 	clock,
@@ -36,5 +36,12 @@ inout [(`DATA_SIZE-1):0] data_east2;
 //------------------Variables------------------
 integer counter;
 reg [(`DATA_SIZE-1):0] next_win;
+
+always @ (posedge clock) begin
+	if (instr==0) begin
+		data_south1 <= data_west1*win+data_north1;
+		data_east1 <=data_west1;
+	end // if (instr==1)
+end // always @ (posedge clock)
 
 endmodule // mac_unit

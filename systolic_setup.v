@@ -1,7 +1,7 @@
 `include "fifo.v"
 
 `define DATA_SIZE 8
-`define MAC_WIDTH 4
+`define MAC_WIDTH 8
 
 module systolic_setup_left_in(
 	clock,
