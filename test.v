@@ -41,7 +41,7 @@ initial begin
 
 	for(iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
 		for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
-			matrix_in[(iter2*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1]= $urandom_range(255,0);
+			matrix_in[(iter2*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE]= $urandom_range(255,0);
 		end // for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1)
 	end // for(iter=0; iter<`MAC_WIDTH; iter=iter+1)
 
@@ -50,7 +50,7 @@ initial begin
 	
 	for(iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
 		for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1) begin
-			$write("%d ",matrix_in[(iter2*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE-1]);
+			$write("%d ",matrix_in[(iter2*`MAC_WIDTH+iter)*`DATA_SIZE+:`DATA_SIZE]);
 		end // for (iter2=0; iter2<`MAC_WIDTH; iter2=iter2+1)
 		$display(" ");
 	end
@@ -63,7 +63,7 @@ always @ (posedge clock) begin
 	if (clock_count<20) begin
 		//$display("clock_count : %d, reset : %d",clock_count, reset);
 		for (iter=0; iter<`MAC_WIDTH; iter=iter+1) begin 
-			$write("%d ", matrix_out[iter*`DATA_SIZE+:`DATA_SIZE-1]);
+			$write("%d ", matrix_out[iter*`DATA_SIZE+:`DATA_SIZE]);
 		end
 		$display(" ");
 	end
