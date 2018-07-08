@@ -23,12 +23,13 @@ input [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_in1;
 input [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_in2;
 //Outputs#################################################################
 output [(`MAC_WIDTH*`MAC_WIDTH-1):0] weights_request;
-output [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_out1;
-output [(2*`MAC_WIDTH*`DATA_SIZE-1):0] values_out2;
+output [(4*`MAC_WIDTH*`DATA_SIZE-1):0] values_out1;
+output [(4*`MAC_WIDTH*`DATA_SIZE-1):0] values_out2;
 //Variables###############################################################
 integer mac_matrix_counter=0;
 integer count1;
 integer count2;
+integer iter;
 reg ground;
 //Horizontal interconnects have 2 extra rows for data input
 wire [(2*`DATA_SIZE-1):0] mac_horizontal1 [(`MAC_WIDTH-1):0][(`MAC_WIDTH):0]; 
@@ -36,10 +37,10 @@ wire [(2*`DATA_SIZE-1):0] mac_horizontal2 [(`MAC_WIDTH-1):0][(`MAC_WIDTH):0];
 wire [(2*`DATA_SIZE-1):0] mac_horizontal3 [(`MAC_WIDTH-1):0][(`MAC_WIDTH):0]; 
 wire [(2*`DATA_SIZE-1):0] mac_horizontal4 [(`MAC_WIDTH-1):0][(`MAC_WIDTH):0];
 //Vertical interconnects have 2 extra columns for data input
-wire [(2*`DATA_SIZE-1):0] mac_vertical1 [(`MAC_WIDTH):0][(`MAC_WIDTH-1):0];
-wire [(2*`DATA_SIZE-1):0] mac_vertical2 [(`MAC_WIDTH):0][(`MAC_WIDTH-1):0];
-wire [(2*`DATA_SIZE-1):0] mac_vertical3 [(`MAC_WIDTH):0][(`MAC_WIDTH-1):0];
-wire [(2*`DATA_SIZE-1):0] mac_vertical4 [(`MAC_WIDTH):0][(`MAC_WIDTH-1):0];
+wire [(4*`DATA_SIZE-1):0] mac_vertical1 [(`MAC_WIDTH):0][(`MAC_WIDTH-1):0];
+wire [(4*`DATA_SIZE-1):0] mac_vertical2 [(`MAC_WIDTH):0][(`MAC_WIDTH-1):0];
+wire [(4*`DATA_SIZE-1):0] mac_vertical3 [(`MAC_WIDTH):0][(`MAC_WIDTH-1):0];
+wire [(4*`DATA_SIZE-1):0] mac_vertical4 [(`MAC_WIDTH):0][(`MAC_WIDTH-1):0];
 //Generate a matrix of interconnected MACs
 //##########################################################################
 genvar i;
@@ -88,10 +89,10 @@ endgenerate
 
 generate
 	for (i=0; i<`MAC_WIDTH; i= i+1) begin
-		assign values_out1[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)] = mac_vertical1[`MAC_WIDTH][i];
-		assign values_out2[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)] = mac_vertical2[`MAC_WIDTH][i];
-		assign mac_horizontal1[i][0] = values_in1[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)];
-		assign mac_horizontal2[i][0] = values_in2[((i+1)*`DATA_SIZE-1):((i)*`DATA_SIZE)];
+		assign values_out1[4*(i*`DATA_SIZE)+:4*`DATA_SIZE] = mac_vertical1[`MAC_WIDTH][i];
+		assign values_out2[4*(i*`DATA_SIZE)+:4*`DATA_SIZE] = mac_vertical2[`MAC_WIDTH][i];
+		assign mac_horizontal1[i][0] = values_in1[(2*i*`DATA_SIZE)+:2*`DATA_SIZE];
+		assign mac_horizontal2[i][0] = values_in2[(2*i*`DATA_SIZE)+:2*`DATA_SIZE];
 
 		assign mac_vertical1[0][i] =0;
 		assign mac_vertical2[0][i] =0;
@@ -100,4 +101,12 @@ generate
 	end // for (i=0; i<`MAC_WIDTH; i= i+1)1
 endgenerate
 //##########################################################################
+
+// always @ (posedge  clock) begin
+// 	for( iter=0; iter<`MAC_WIDTH; iter=iter+1) begin
+// 		$write("%d ", values_out1[4*(iter*`DATA_SIZE)+:4*`DATA_SIZE]);
+// 	end // for( iter=0l; iter<`MAC_WIDTH; iter=iter+1)
+// 	$display(" ");
+// end // always @ (posedge  clock)
+
 endmodule // mac_matrix
